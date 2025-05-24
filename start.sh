@@ -11,7 +11,7 @@ apt-get update && apt-get install -y \
   libxdamage1 \
   libxrandr2 \
   libxcb1 \
-  libasound2 \
+  libasound2t64 \
   libxcomposite1 \
   libxfixes3 \
   libx11-xcb1 \
