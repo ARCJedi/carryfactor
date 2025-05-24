@@ -11,13 +11,16 @@ def scrape_cta_match(match_id):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(url)
-        page.wait_for_timeout(3000)  # Wait 3 seconds for JS-rendered content
+        page.wait_for_timeout(3000)  # Wait 3 seconds for JS to render
         html = page.content()
         browser.close()
 
-        # Debug print in Railway logs if needed:
-        # print(html[:2000])  # Optional: print a preview of the HTML
+        # Log a chunk of the rendered HTML to Railway logs to debug structure
+        print("=== HTML START ===")
+        print(html[:5000])
+        print("=== HTML END ===")
 
+        # Regex to match: name, kills, deaths, damage dealt, damage taken
         pattern = re.compile(
             r"<td class=['\"]box-score-name['\"]>(.*?)</td>\s*"
             r"<td>(\d+)</td>\s*"
