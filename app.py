@@ -1,7 +1,19 @@
 from flask import Flask, jsonify
-from playwright.sync_api import sync_playwright
+import os
 import re
 import time
+
+# Ensure Playwright browsers are installed at runtime (Render fix)
+from playwright.__main__ import main as playwright_main
+from playwright.sync_api import sync_playwright
+
+# Attempt install only if not already present
+if not os.path.exists("/opt/render/.cache/ms-playwright"):
+    try:
+        print("🔧 Installing Playwright browsers at runtime...")
+        playwright_main(["install"])
+    except Exception as e:
+        print("❌ Playwright browser install failed:", e)
 
 app = Flask(__name__)
 
@@ -14,25 +26,19 @@ def scrape_cta_match(match_id):
         page = context.new_page()
         page.goto(url)
 
-        # Click "Damage Stats"
+        # Click Damage Stats tab
         try:
             page.click("a:has-text('Damage Stats')")
         except Exception as e:
-            print("Could not click tab:", e)
+            print("⚠️ Could not click 'Damage Stats':", e)
 
-        # Wait long enough for JS to fully render
-        print("⏳ Waiting 10 seconds for everything to render...")
+        print("⏳ Waiting 10 seconds for rendering...")
         page.wait_for_timeout(10000)
 
         html = page.inner_html("body")
         browser.close()
 
-        # Log for debugging
-        print("=== HTML BODY START ===")
-        print(html[:5000])
-        print("=== HTML BODY END ===")
-
-        # Try crude pattern match: look for <td><a href=player.php?...>Name</a></td> and 4 more tds after
+        # Extract using regex fallback (brute force)
         pattern = re.compile(
             r'<td><a href="player\.php\?name=.*?">(.*?)</a></td>\s*'
             r'<td>(\d+)</td>\s*'  # kills
@@ -70,6 +76,5 @@ def get_match_stats(match_id):
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
