@@ -17,14 +17,13 @@ def extract_stat_rows(page):
             const rows = Array.from(document.querySelectorAll("tr"));
             return rows.map(row => {
                 const cols = row.querySelectorAll("td");
-                if (cols.length >= 5 && row.innerHTML.includes("box-score-name")) {
-                    return {
-                        name: cols[0].textContent.trim(),
-                        kills: parseInt(cols[1].textContent.trim()),
-                        deaths: parseInt(cols[2].textContent.trim()),
-                        dd: parseInt(cols[3].textContent.trim()),
-                        dt: parseInt(cols[4].textContent.trim())
-                    };
+                if (cols.length >= 5 && cols[0].querySelector("a")) {
+                    const name = cols[0].querySelector("a").textContent.trim();
+                    const kills = parseInt(cols[1].textContent.trim());
+                    const deaths = parseInt(cols[2].textContent.trim());
+                    const dd = parseInt(cols[3].textContent.trim());
+                    const dt = parseInt(cols[4].textContent.trim());
+                    return { name, kills, deaths, dd, dt };
                 }
                 return null;
             }).filter(Boolean);
@@ -65,7 +64,10 @@ def scrape_cta_match(match_id):
             # Format result for each tab
             tab_results = []
             for player in players:
-                kills, deaths, dd, dt = player["kills"], player["deaths"], player["dd"], player["dt"]
+                kills = player["kills"]
+                deaths = player["deaths"]
+                dd = player["dd"]
+                dt = player["dt"]
                 dr = dd / dt if dt > 0 else 0
                 raw_cf = dd * 2.0 + dr * 3.0 + kills * 2.0 - deaths * 2.0 + 10
                 cf_100 = round((raw_cf / 11000) * 100, 2)
