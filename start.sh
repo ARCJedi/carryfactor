@@ -4,8 +4,8 @@ echo "Installing required system dependencies..."
 apt-get update && apt-get install -y \
   libnss3 \
   libnspr4 \
-  libatk1.0-0 \
-  libatk-bridge2.0-0 \
+  libatk1.0-0t64 \
+  libatk-bridge2.0-0t64 \
   libcairo2 \
   libxext6 \
   libxdamage1 \
@@ -17,7 +17,9 @@ apt-get update && apt-get install -y \
   libx11-xcb1 \
   libxrender1 \
   libdbus-1-3 \
-  libatspi2.0-0
+  libatspi2.0-0t64 \
+  libgbm1 \
+  libxkbcommon0
 
 echo "Installing Playwright (Python)..."
 python -m playwright install chromium
