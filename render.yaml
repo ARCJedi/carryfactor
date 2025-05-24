@@ -3,7 +3,5 @@ services:
     name: carryfactor
     env: python
     plan: free
-    buildCommand: |
-      pip install -r requirements.txt
-      python -m playwright install
+    buildCommand: ./build.sh
     startCommand: python app.py
