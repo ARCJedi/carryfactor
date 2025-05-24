@@ -12,8 +12,8 @@ def scrape_cta_match(match_id):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(url)
-        page.wait_for_timeout(2000)  # wait for rendering
-        html = page.content()
+page.wait_for_timeout(3000)  # wait 3 seconds for JS to render
+html = page.content()
         browser.close()
 
         # Match each player row
