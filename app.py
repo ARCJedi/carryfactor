@@ -11,16 +11,38 @@ def scrape_cta_match(match_id):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(url)
-        page.wait_for_timeout(3000)  # Wait 3 seconds for JS to render
+
+        # Wait for box score toggles
+        page.wait_for_selector("a.box-score-toggle", timeout=5000)
+
+        # Expand all box score sections
+        for btn in page.query_selector_all("a.box-score-toggle"):
+            try:
+                btn.click()
+                page.wait_for_timeout(200)
+            except:
+                continue
+
+        # Click all "Damage Stats" tabs (they load DD and DT)
+        for tab in page.query_selector_all("a[id^='damage_stats-tab']"):
+            try:
+                tab.click()
+                page.wait_for_timeout(300)
+            except:
+                continue
+
+        # Final pause to allow AJAX content to render
+        page.wait_for_timeout(2000)
+
         html = page.content()
         browser.close()
 
-        # Log a chunk of the rendered HTML to Railway logs to debug structure
+        # Print preview of HTML to logs
         print("=== HTML START ===")
         print(html[:5000])
         print("=== HTML END ===")
 
-        # Regex to match: name, kills, deaths, damage dealt, damage taken
+        # Extract stats: name, kills, deaths, damage dealt, damage taken
         pattern = re.compile(
             r"<td class=['\"]box-score-name['\"]>(.*?)</td>\s*"
             r"<td>(\d+)</td>\s*"
