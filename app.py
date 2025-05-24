@@ -13,54 +13,65 @@ def scrape_cta_match(match_id):
         page = context.new_page()
         page.goto(url)
 
-        # Click all the tabs to reveal hidden content
+        # Wait for all scripts and AJAX to complete
+        page.wait_for_load_state("networkidle")
+        page.wait_for_timeout(2000)
+
+        # Click all tab buttons to potentially trigger DOM rendering
         for tab in ["Overview", "Damage Stats", "Weapon Breakdowns", "Player Matchups"]:
             try:
                 page.click(f"a:has-text('{tab}')")
-                page.wait_for_timeout(300)
+                page.wait_for_timeout(400)
             except Exception as e:
                 print(f"Could not click tab '{tab}':", e)
 
-        # Wait for everything to finish rendering
-        page.wait_for_timeout(1000)
+        # Extract all stat rows directly via JS DOM
+        players = page.evaluate("""
+            () => {
+                const rows = Array.from(document.querySelectorAll("tr"));
+                return rows.map(row => {
+                    const cols = row.querySelectorAll("td");
+                    if (cols.length >= 5 && row.innerHTML.includes("box-score-name")) {
+                        return {
+                            name: cols[0].textContent.trim(),
+                            kills: parseInt(cols[1].textContent.trim()),
+                            deaths: parseInt(cols[2].textContent.trim()),
+                            dd: parseInt(cols[3].textContent.trim()),
+                            dt: parseInt(cols[4].textContent.trim())
+                        };
+                    }
+                    return null;
+                }).filter(Boolean);
+            }
+        """)
 
-        # Get full inner HTML (this ensures we see toggled tab content)
-        html = page.inner_html("body")
         browser.close()
 
-        # Log some of the captured HTML for debugging
-        print("=== HTML BODY START ===")
-        print(html[:5000])
-        print("=== HTML BODY END ===")
+    if not players:
+        print("No stat rows found.")
+        return []
 
-        # Extract player stats using regex
-        pattern = re.compile(
-            r"<td class=['\"]box-score-name['\"]>(.*?)</td>\s*"
-            r"<td>(\d+)</td>\s*"
-            r"<td>(\d+)</td>\s*"
-            r"<td>(\d+)</td>\s*"
-            r"<td>(\d+)</td>"
-        )
+    results = []
+    for player in players:
+        kills = player["kills"]
+        deaths = player["deaths"]
+        dd = player["dd"]
+        dt = player["dt"]
+        dr = dd / dt if dt > 0 else 0
+        raw_cf = dd * 2.0 + dr * 3.0 + kills * 2.0 - deaths * 2.0 + 10
+        cf_100 = round((raw_cf / 11000) * 100, 2)
+        results.append({
+            "name": player["name"],
+            "kills": kills,
+            "deaths": deaths,
+            "dd": dd,
+            "dt": dt,
+            "dr": round(dr, 2),
+            "raw_cf": round(raw_cf, 2),
+            "cf_100": cf_100
+        })
 
-        results = []
-        for match in pattern.finditer(html):
-            name, kills, deaths, dd, dt = match.groups()
-            kills, deaths, dd, dt = map(int, [kills, deaths, dd, dt])
-            dr = dd / dt if dt > 0 else 0
-            raw_cf = dd * 2.0 + dr * 3.0 + kills * 2.0 - deaths * 2.0 + 10
-            cf_100 = round((raw_cf / 11000) * 100, 2)
-            results.append({
-                "name": name,
-                "kills": kills,
-                "deaths": deaths,
-                "dd": dd,
-                "dt": dt,
-                "dr": round(dr, 2),
-                "raw_cf": round(raw_cf, 2),
-                "cf_100": cf_100
-            })
-
-        return results
+    return results
 
 @app.route('/cta/<int:match_id>')
 def get_match_stats(match_id):
