@@ -1,4 +1,3 @@
-
 from flask import Flask, jsonify
 from playwright.sync_api import sync_playwright
 import re
@@ -12,20 +11,28 @@ def scrape_cta_match(match_id):
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         page.goto(url)
-page.wait_for_timeout(3000)  # wait 3 seconds for JS to render
-html = page.content()
+        page.wait_for_timeout(3000)  # Wait 3 seconds for JS-rendered content
+        html = page.content()
         browser.close()
 
-        # Match each player row
-        pattern = re.compile(r"<td class='box-score-name'>(.*?)</td>\s*<td>(\d+)</td>\s*<td>(\d+)</td>\s*<td>(\d+)</td>\s*<td>(\d+)</td>")
-        results = []
+        # Debug print in Railway logs if needed:
+        # print(html[:2000])  # Optional: print a preview of the HTML
 
+        pattern = re.compile(
+            r"<td class=['\"]box-score-name['\"]>(.*?)</td>\s*"
+            r"<td>(\d+)</td>\s*"
+            r"<td>(\d+)</td>\s*"
+            r"<td>(\d+)</td>\s*"
+            r"<td>(\d+)</td>"
+        )
+
+        results = []
         for match in pattern.finditer(html):
             name, kills, deaths, dd, dt = match.groups()
             kills, deaths, dd, dt = map(int, [kills, deaths, dd, dt])
-            dr = dd / dt if dt != 0 else 0
-            raw_cf = dd * 1.5 + dr * 2 + kills * 2 - deaths + 5
-            cf_100 = round((raw_cf / 9062.5) * 100, 2)
+            dr = dd / dt if dt > 0 else 0
+            raw_cf = dd * 2.0 + dr * 3.0 + kills * 2.0 - deaths * 2.0 + 10
+            cf_100 = round((raw_cf / 11000) * 100, 2)
             results.append({
                 "name": name,
                 "kills": kills,
@@ -47,8 +54,7 @@ def get_match_stats(match_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-import os
-
-if __name__ == "__main__":
+if __name__ == '__main__':
+    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
